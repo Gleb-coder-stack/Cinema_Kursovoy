@@ -1,0 +1,78 @@
+{% extends "base.html" %}
+
+{% block title %}Расписание{% endblock %}
+
+{% block content %}
+<h1 class="page-title">Расписание фильмов</h1>
+
+<div style="margin-bottom: 30px;">
+    <input type="date" id="dateFilter" class="form-group" style="padding: 10px; border-radius: 8px; border: none; width: 200px;">
+</div>
+
+<div class="movies-grid" id="sessionsGrid">
+    <div style="color: white; text-align: center; grid-column: 1/-1;">Загрузка расписания...</div>
+</div>
+
+<script>
+let allSessions = [];
+
+document.addEventListener('DOMContentLoaded', async function() {
+    await loadSessions();
+
+    document.getElementById('dateFilter').addEventListener('change', function(e) {
+        filterSessions(e.target.value);
+    });
+});
+
+async function loadSessions() {
+    try {
+        console.log('Загрузка сеансов...');
+        allSessions = await apiCall('/api/sessions');
+        console.log('Получены сеансы:', allSessions);
+        displaySessions(allSessions);
+    } catch (error) {
+        console.error('Ошибка загрузки сеансов:', error);
+        document.getElementById('sessionsGrid').innerHTML =
+            '<div style="color: white; text-align: center; grid-column: 1/-1;">Ошибка загрузки расписания</div>';
+    }
+}
+
+function displaySessions(sessions) {
+    const grid = document.getElementById('sessionsGrid');
+
+    if (!sessions || sessions.length === 0) {
+        grid.innerHTML = '<div style="color: white; text-align: center; grid-column: 1/-1;">Нет доступных сеансов</div>';
+        return;
+    }
+
+    grid.innerHTML = '';
+
+    sessions.forEach(session => {
+        const card = document.createElement('div');
+        card.className = 'movie-card';
+        card.innerHTML = `
+            <div class="movie-poster"></div>
+            <div class="movie-info">
+                <div class="movie-title">${session.movie || 'Без названия'}</div>
+                <div class="movie-detail"><span>Жанр</span> ${session.movie ? session.movie.split(' ')[0] : 'Не указан'}</div>
+                <div class="movie-detail"><span>Начало</span> ${session.start_time || '--:--'}</div>
+                <div class="movie-detail"><span>Зал</span> ${session.hall || '?'}</div>
+                <div class="movie-detail"><span>Цена</span> ${session.price || '0'} ₽</div>
+                <div class="age-badge">${session.movie === 'Интерстеллар' ? '12+' : (session.movie === 'Криминальное чтиво' ? '16+' : '12+')}</div>
+            </div>
+        `;
+        grid.appendChild(card);
+    });
+}
+
+function filterSessions(date) {
+    if (!date) {
+        displaySessions(allSessions);
+        return;
+    }
+
+    const filtered = allSessions.filter(s => s.date_raw === date);
+    displaySessions(filtered);
+}
+</script>
+{% endblock %}
